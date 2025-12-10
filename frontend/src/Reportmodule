@@ -1,0 +1,578 @@
+import { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Download, Calendar, Filter, Search, Loader2, AlertCircle, FileText, Target, Users, Package, DollarSign, ChevronDown, X } from 'lucide-react';
+
+const API = 'http://localhost:3001/api';
+
+export default function ReportsModule() {
+  const [activeReport, setActiveReport] = useState('sales-pipeline');
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
+  const reports = [
+    { 
+      id: 'sales-pipeline', 
+      name: 'Sales Pipeline', 
+      icon: TrendingUp, 
+      color: '#3b82f6',
+      description: 'Analyze opportunities by stage and value'
+    },
+    { 
+      id: 'lead-source', 
+      name: 'Lead Source Performance', 
+      icon: Target, 
+      color: '#8b5cf6',
+      description: 'Track lead generation and conversion by source'
+    },
+    { 
+      id: 'support-metrics', 
+      name: 'Support Metrics', 
+      icon: FileText, 
+      color: '#f97316',
+      description: 'Monitor case volume, status, and resolution'
+    },
+    { 
+      id: 'product-performance', 
+      name: 'Product Performance', 
+      icon: Package, 
+      color: '#10b981',
+      description: 'View top products and inventory levels'
+    },
+    { 
+      id: 'revenue-analysis', 
+      name: 'Revenue Analysis', 
+      icon: DollarSign, 
+      color: '#eab308',
+      description: 'Track revenue trends and closed deals'
+    }
+  ];
+
+  useEffect(() => {
+    fetchReportData();
+  }, [activeReport, dateRange]);
+
+  const fetchReportData = async () => {
+    setLoading(true);
+    try {
+      let data;
+      
+      switch(activeReport) {
+        case 'sales-pipeline':
+          data = await fetchSalesPipeline();
+          break;
+        case 'lead-source':
+          data = await fetchLeadSource();
+          break;
+        case 'support-metrics':
+          data = await fetchSupportMetrics();
+          break;
+        case 'product-performance':
+          data = await fetchProductPerformance();
+          break;
+        case 'revenue-analysis':
+          data = await fetchRevenueAnalysis();
+          break;
+        default:
+          data = null;
+      }
+      
+      setReportData(data);
+    } catch (err) {
+      console.error('Failed to fetch report:', err);
+      setReportData({ error: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Report 1: Sales Pipeline
+  const fetchSalesPipeline = async () => {
+    const res = await fetch(`${API}/Opportunity`);
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error);
+    
+    const opportunities = data.records;
+    
+    // Group by stage
+    const byStage = {};
+    let totalValue = 0;
+    
+    opportunities.forEach(opp => {
+      const stage = opp.StageName || 'Unknown';
+      const amount = parseFloat(opp.Amount) || 0;
+      
+      if (!byStage[stage]) {
+        byStage[stage] = { count: 0, value: 0, opportunities: [] };
+      }
+      
+      byStage[stage].count++;
+      byStage[stage].value += amount;
+      byStage[stage].opportunities.push(opp);
+      totalValue += amount;
+    });
+    
+    // Calculate win rate
+    const closedWon = byStage['Closed Won']?.count || 0;
+    const closedLost = byStage['Closed Lost']?.count || 0;
+    const winRate = closedWon + closedLost > 0 
+      ? ((closedWon / (closedWon + closedLost)) * 100).toFixed(1)
+      : 0;
+    
+    return {
+      type: 'table',
+      summary: {
+        totalOpportunities: opportunities.length,
+        totalValue: totalValue,
+        winRate: winRate,
+        avgDealSize: opportunities.length > 0 ? (totalValue / opportunities.length).toFixed(2) : 0
+      },
+      data: Object.entries(byStage).map(([stage, data]) => ({
+        stage,
+        count: data.count,
+        value: data.value,
+        percentage: ((data.value / totalValue) * 100).toFixed(1)
+      })).sort((a, b) => b.value - a.value)
+    };
+  };
+
+  // Report 2: Lead Source Performance
+  const fetchLeadSource = async () => {
+    const res = await fetch(`${API}/Lead`);
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error);
+    
+    const leads = data.records;
+    
+    // Group by source
+    const bySource = {};
+    
+    leads.forEach(lead => {
+      const source = lead.LeadSource || 'Unknown';
+      const status = lead.Status || 'Unknown';
+      
+      if (!bySource[source]) {
+        bySource[source] = { 
+          total: 0, 
+          converted: 0, 
+          qualified: 0,
+          open: 0 
+        };
+      }
+      
+      bySource[source].total++;
+      
+      if (status === 'Converted') bySource[source].converted++;
+      if (status === 'Qualified') bySource[source].qualified++;
+      if (status === 'Open - Not Contacted' || status === 'Open') bySource[source].open++;
+    });
+    
+    return {
+      type: 'table',
+      summary: {
+        totalLeads: leads.length,
+        converted: Object.values(bySource).reduce((sum, s) => sum + s.converted, 0),
+        conversionRate: leads.length > 0 
+          ? ((Object.values(bySource).reduce((sum, s) => sum + s.converted, 0) / leads.length) * 100).toFixed(1)
+          : 0
+      },
+      data: Object.entries(bySource).map(([source, data]) => ({
+        source,
+        total: data.total,
+        converted: data.converted,
+        conversionRate: data.total > 0 ? ((data.converted / data.total) * 100).toFixed(1) : 0,
+        qualified: data.qualified,
+        open: data.open
+      })).sort((a, b) => b.total - a.total)
+    };
+  };
+
+  // Report 3: Support Metrics
+  const fetchSupportMetrics = async () => {
+    const res = await fetch(`${API}/Case`);
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error);
+    
+    const cases = data.records;
+    
+    // Group by status
+    const byStatus = {};
+    const byPriority = {};
+    
+    cases.forEach(c => {
+      const status = c.Status || 'Unknown';
+      const priority = c.Priority || 'Unknown';
+      
+      byStatus[status] = (byStatus[status] || 0) + 1;
+      byPriority[priority] = (byPriority[priority] || 0) + 1;
+    });
+    
+    return {
+      type: 'multi-table',
+      summary: {
+        totalCases: cases.length,
+        open: byStatus['New'] || 0 + byStatus['Working'] || 0,
+        closed: byStatus['Closed'] || 0,
+        highPriority: byPriority['High'] || 0
+      },
+      byStatus: Object.entries(byStatus).map(([status, count]) => ({
+        status,
+        count,
+        percentage: ((count / cases.length) * 100).toFixed(1)
+      })).sort((a, b) => b.count - a.count),
+      byPriority: Object.entries(byPriority).map(([priority, count]) => ({
+        priority,
+        count,
+        percentage: ((count / cases.length) * 100).toFixed(1)
+      })).sort((a, b) => b.count - a.count)
+    };
+  };
+
+  // Report 4: Product Performance
+  const fetchProductPerformance = async () => {
+    const res = await fetch(`${API}/Product2`);
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error);
+    
+    const products = data.records;
+    
+    return {
+      type: 'table',
+      summary: {
+        totalProducts: products.length,
+        activeProducts: products.filter(p => p.IsActive).length,
+        families: [...new Set(products.map(p => p.Family).filter(Boolean))].length
+      },
+      data: products.map(p => ({
+        name: p.Name,
+        code: p.ProductCode,
+        family: p.Family || 'None',
+        isActive: p.IsActive ? 'Active' : 'Inactive',
+        description: p.Description ? p.Description.substring(0, 50) + '...' : 'N/A'
+      })).slice(0, 20)
+    };
+  };
+
+  // Report 5: Revenue Analysis
+  const fetchRevenueAnalysis = async () => {
+    const res = await fetch(`${API}/Opportunity`);
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error);
+    
+    const opportunities = data.records;
+    
+    // Filter closed won
+    const closedWon = opportunities.filter(o => o.StageName === 'Closed Won');
+    const closedLost = opportunities.filter(o => o.StageName === 'Closed Lost');
+    
+    const wonRevenue = closedWon.reduce((sum, o) => sum + (parseFloat(o.Amount) || 0), 0);
+    const lostRevenue = closedLost.reduce((sum, o) => sum + (parseFloat(o.Amount) || 0), 0);
+    const totalRevenue = opportunities.reduce((sum, o) => sum + (parseFloat(o.Amount) || 0), 0);
+    
+    // Group by month
+    const byMonth = {};
+    closedWon.forEach(opp => {
+      if (opp.CloseDate) {
+        const month = new Date(opp.CloseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        byMonth[month] = (byMonth[month] || 0) + (parseFloat(opp.Amount) || 0);
+      }
+    });
+    
+    return {
+      type: 'table',
+      summary: {
+        totalRevenue: wonRevenue,
+        closedWon: closedWon.length,
+        closedLost: closedLost.length,
+        winRate: closedWon.length + closedLost.length > 0 
+          ? ((closedWon.length / (closedWon.length + closedLost.length)) * 100).toFixed(1)
+          : 0
+      },
+      data: Object.entries(byMonth).map(([month, revenue]) => ({
+        month,
+        revenue,
+        formatted: `$${revenue.toLocaleString()}`
+      })).sort((a, b) => new Date(a.month) - new Date(b.month))
+    };
+  };
+
+  const exportToCSV = () => {
+    if (!reportData || !reportData.data) return;
+    
+    const activeReportConfig = reports.find(r => r.id === activeReport);
+    const filename = `${activeReportConfig.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    let csv = '';
+    
+    // Add headers
+    const headers = Object.keys(reportData.data[0]);
+    csv += headers.join(',') + '\n';
+    
+    // Add data rows
+    reportData.data.forEach(row => {
+      csv += headers.map(h => {
+        const val = row[h];
+        // Escape commas and quotes in values
+        return typeof val === 'string' && (val.includes(',') || val.includes('"')) 
+          ? `"${val.replace(/"/g, '""')}"` 
+          : val;
+      }).join(',') + '\n';
+    });
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const activeReportConfig = reports.find(r => r.id === activeReport);
+  const Icon = activeReportConfig?.icon || BarChart3;
+
+  return (
+    <div style={{ minHeight: 'calc(100vh - 200px)' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)' }}>
+            <BarChart3 size={24} color="#fff" />
+          </div>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#fff', margin: 0 }}>Reports</h1>
+            <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px' }}>Comprehensive business intelligence and analytics</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Selection Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        {reports.map(report => {
+          const ReportIcon = report.icon;
+          const isActive = activeReport === report.id;
+          
+          return (
+            <button
+              key={report.id}
+              onClick={() => setActiveReport(report.id)}
+              style={{
+                padding: '20px',
+                backgroundColor: isActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(15, 23, 42, 0.5)',
+                backdropFilter: 'blur(20px)',
+                border: isActive ? '2px solid #3b82f6' : '1px solid rgba(51, 65, 85, 0.5)',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', backgroundColor: report.color, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ReportIcon size={20} color="#fff" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#fff', margin: '0 0 4px 0' }}>{report.name}</h3>
+                  <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, lineHeight: '1.4' }}>{report.description}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filters Bar */}
+      <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Calendar size={16} color="#94a3b8" />
+              <span style={{ fontSize: '14px', color: '#94a3b8' }}>Date Range:</span>
+            </div>
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              style={{ padding: '8px 12px', backgroundColor: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '8px', color: '#fff', fontSize: '14px' }}
+            />
+            <span style={{ color: '#64748b' }}>to</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              style={{ padding: '8px 12px', backgroundColor: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '8px', color: '#fff', fontSize: '14px' }}
+            />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => fetchReportData()}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              <Search size={16} />
+              Refresh
+            </button>
+            <button
+              onClick={exportToCSV}
+              disabled={!reportData || !reportData.data}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: (!reportData || !reportData.data) ? 'not-allowed' : 'pointer', opacity: (!reportData || !reportData.data) ? 0.5 : 1 }}
+            >
+              <Download size={16} />
+              Export CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Content */}
+      {loading ? (
+        <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '16px', padding: '80px 20px', textAlign: 'center' }}>
+          <Loader2 className="animate-pulse" size={48} color="#3b82f6" style={{ margin: '0 auto 16px' }} />
+          <p style={{ color: '#94a3b8', margin: 0 }}>Loading report data...</p>
+        </div>
+      ) : reportData?.error ? (
+        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', backdropFilter: 'blur(20px)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '16px', padding: '40px 20px', textAlign: 'center' }}>
+          <AlertCircle size={48} color="#ef4444" style={{ margin: '0 auto 16px' }} />
+          <p style={{ color: '#ef4444', margin: 0, fontWeight: 500 }}>Error loading report: {reportData.error}</p>
+        </div>
+      ) : reportData ? (
+        <ReportContent report={activeReportConfig} data={reportData} />
+      ) : null}
+    </div>
+  );
+}
+
+// Report Content Renderer
+function ReportContent({ report, data }) {
+  const Icon = report.icon;
+  
+  return (
+    <div>
+      {/* Summary Cards */}
+      {data.summary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          {Object.entries(data.summary).map(([key, value]) => (
+            <div key={key} style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '12px', padding: '20px' }}>
+              <p style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px 0' }}>
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+              </p>
+              <p style={{ fontSize: '24px', fontWeight: 700, color: '#fff', margin: 0 }}>
+                {typeof value === 'number' && key.toLowerCase().includes('rate') ? `${value}%` :
+                 typeof value === 'number' && (key.toLowerCase().includes('value') || key.toLowerCase().includes('revenue')) ? `$${value.toLocaleString()}` :
+                 value.toLocaleString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Data Table */}
+      {data.type === 'table' && data.data && (
+        <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '20px', borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Icon size={20} color={report.color} />
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>{report.name} Details</h3>
+            </div>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'rgba(30, 41, 59, 0.5)', borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
+                  {Object.keys(data.data[0] || {}).map(key => (
+                    <th key={key} style={{ padding: '16px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.data.map((row, idx) => (
+                  <tr key={idx} style={{ borderBottom: idx < data.data.length - 1 ? '1px solid rgba(51, 65, 85, 0.3)' : 'none' }} className="table-row">
+                    {Object.entries(row).map(([key, value]) => (
+                      <td key={key} style={{ padding: '16px 20px', fontSize: '14px', color: '#e2e8f0' }}>
+                        {typeof value === 'number' && key.toLowerCase().includes('rate') ? `${value}%` :
+                         typeof value === 'number' && value > 1000 && (key.toLowerCase().includes('value') || key.toLowerCase().includes('revenue')) ? `$${value.toLocaleString()}` :
+                         value}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Table Layout (for Support Metrics) */}
+      {data.type === 'multi-table' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+          {data.byStatus && (
+            <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ padding: '20px', borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: 0 }}>By Status</h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'rgba(30, 41, 59, 0.5)' }}>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Status</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Count</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.byStatus.map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx < data.byStatus.length - 1 ? '1px solid rgba(51, 65, 85, 0.3)' : 'none' }}>
+                        <td style={{ padding: '12px 20px', fontSize: '14px', color: '#e2e8f0' }}>{row.status}</td>
+                        <td style={{ padding: '12px 20px', fontSize: '14px', color: '#e2e8f0' }}>{row.count}</td>
+                        <td style={{ padding: '12px 20px', fontSize: '14px', color: '#e2e8f0' }}>{row.percentage}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {data.byPriority && (
+            <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ padding: '20px', borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: 0 }}>By Priority</h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'rgba(30, 41, 59, 0.5)' }}>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Priority</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Count</th>
+                      <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.byPriority.map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx < data.byPriority.length - 1 ? '1px solid rgba(51, 65, 85, 0.3)' : 'none' }}>
+                        <td style={{ padding: '12px 20px', fontSize: '14px', color: '#e2e8f0' }}>{row.priority}</td>
+                        <td style={{ padding: '12px 20px', fontSize: '14px', color: '#e2e8f0' }}>{row.count}</td>
+                        <td style={{ padding: '12px 20px', fontSize: '14px', color: '#e2e8f0' }}>{row.percentage}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
