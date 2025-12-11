@@ -47,6 +47,15 @@ const objectFields = {
   Shipment__c: 'Id, Name, Order__c, Tracking_Number__c, Carrier__c, Status__c, Shipped_Date__c, CreatedDate'
 };
 
+// ⚠️ IMPORTANT: Health endpoint MUST come BEFORE generic :object routes!
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    connected: !!conn.accessToken,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Create record
 app.post('/api/:object', async (req, res) => {
   try {
@@ -80,7 +89,7 @@ app.get('/api/:object', async (req, res) => {
     console.log(`✅ Found ${records.length} ${object} records`);
     res.json({ success: true, records });
   } catch (err) {
-    console.error(`❌ Error fetching ${req.params.object}:`, err.message);
+    console.error(`Error fetching ${req.params.object}:`, err);
     res.status(500).json({ 
       success: false, 
       error: err.message,
@@ -126,7 +135,7 @@ app.patch('/api/:object/:id', async (req, res) => {
       console.log(`✅ Updated ${object} ${id}`);
       res.json({ success: true, id: result.id });
     } else {
-      console.error(`❌ Update failed:`, result.errors);
+      console.error(`Failed to update ${object} ${id}:`, result.errors);
       res.status(400).json({ success: false, errors: result.errors });
     }
   } catch (err) {
@@ -141,11 +150,12 @@ app.delete('/api/:object/:id', async (req, res) => {
     const { object, id } = req.params;
     console.log(`Deleting ${object} ${id}...`);
     const result = await conn.sobject(object).destroy(id);
+    
     if (result.success) {
       console.log(`✅ Deleted ${object} ${id}`);
       res.json({ success: true, id: result.id });
     } else {
-      console.error(`❌ Delete failed:`, result.errors);
+      console.error(`Failed to delete ${object} ${id}:`, result.errors);
       res.status(400).json({ success: false, errors: result.errors });
     }
   } catch (err) {
@@ -154,13 +164,9 @@ app.delete('/api/:object/:id', async (req, res) => {
   }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', connected: !!conn.accessToken });
-});
-
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, async () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
   await connectToSalesforce();
 });
