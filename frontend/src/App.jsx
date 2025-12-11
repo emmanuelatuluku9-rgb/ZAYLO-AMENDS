@@ -1,6 +1,114 @@
 import { useState, useEffect } from 'react';
 import { Menu, Home, Building2, Users, Target, FileText, DollarSign, Search, Bell, Settings, ChevronDown, Plus, X, Check, AlertCircle, Loader2, Upload, Eye, Edit, Trash2, LogOut, Download, ChevronRight, ArrowLeft, ExternalLink, Package, Warehouse, ShoppingCart, Truck, Receipt, CreditCard, ShoppingBag, Briefcase, Calendar, Activity } from 'lucide-react';
-import { navItems, relationships, formConfigs } from './salesforceConfig';
+// ========================================
+// EMBEDDED CONFIGURATION (No separate file needed!)
+// ========================================
+
+// Navigation items
+const navItems = [
+  { id: 'Home', icon: Home, label: 'Home' },
+  { id: 'Account', icon: Building2, label: 'Accounts' },
+  { id: 'Contact', icon: Users, label: 'Contacts' },
+  { id: 'Lead', icon: Target, label: 'Leads' },
+  { id: 'Opportunity', icon: DollarSign, label: 'Opportunities' },
+  { id: 'Quote', icon: FileText, label: 'Quotes' },
+  { id: 'Campaign', icon: Activity, label: 'Campaigns' },
+  { id: 'Case', icon: FileText, label: 'Cases' },
+  { id: 'Contract', icon: Briefcase, label: 'Contracts' },
+  { id: 'Asset', icon: Package, label: 'Assets' },
+  { id: 'WorkOrder', icon: Activity, label: 'Work Orders' },
+  { id: 'Product2', icon: Package, label: 'Products' },
+  { id: 'Order', icon: ShoppingCart, label: 'Orders' },
+  { id: 'Invoice__c', icon: Receipt, label: 'Invoices' },
+  { id: 'Payment__c', icon: CreditCard, label: 'Payments' },
+  { id: 'Inventory__c', icon: Warehouse, label: 'Inventory' },
+  { id: 'Shipment__c', icon: Truck, label: 'Shipments' },
+];
+
+// Relationships
+const relationships = {
+  Account: [
+    { object: 'Contact', field: 'AccountId', label: 'Contacts' },
+    { object: 'Opportunity', field: 'AccountId', label: 'Opportunities' },
+    { object: 'Case', field: 'AccountId', label: 'Cases' },
+    { object: 'Contract', field: 'AccountId', label: 'Contracts' },
+  ],
+  Contact: [
+    { object: 'Account', field: 'AccountId', label: 'Account', single: true },
+    { object: 'Case', field: 'ContactId', label: 'Cases' },
+    { object: 'Opportunity', field: 'ContactId', label: 'Opportunities' },
+  ],
+};
+
+// Form configurations
+const formConfigs = {
+  Account: [
+    { name: 'Name', label: 'Account Name', required: true },
+    { name: 'Industry', label: 'Industry' },
+    { name: 'Phone', label: 'Phone', type: 'tel' },
+  ],
+  Contact: [
+    { name: 'FirstName', label: 'First Name' },
+    { name: 'LastName', label: 'Last Name', required: true },
+    { name: 'Email', label: 'Email', type: 'email' },
+    { name: 'Phone', label: 'Phone', type: 'tel' },
+  ],
+  Lead: [
+    { name: 'FirstName', label: 'First Name' },
+    { name: 'LastName', label: 'Last Name', required: true },
+    { name: 'Company', label: 'Company', required: true },
+    { name: 'Email', label: 'Email', type: 'email' },
+  ],
+  Case: [
+    { name: 'Subject', label: 'Subject', required: true },
+    { name: 'Status', label: 'Status', type: 'select', options: ['New', 'Working', 'Escalated', 'Closed'] },
+    { name: 'Priority', label: 'Priority', type: 'select', options: ['Low', 'Medium', 'High'] },
+  ],
+  Opportunity: [
+    { name: 'Name', label: 'Opportunity Name', required: true },
+    { name: 'StageName', label: 'Stage', required: true, type: 'select', options: ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'] },
+    { name: 'Amount', label: 'Amount', type: 'number' },
+    { name: 'CloseDate', label: 'Close Date', type: 'date', required: true },
+  ],
+  Contract: [
+    { name: 'AccountId', label: 'Account ID', required: true },
+    { name: 'Status', label: 'Status', type: 'select', options: ['Draft', 'In Approval Process', 'Activated', 'Expired'] },
+    { name: 'StartDate', label: 'Start Date', type: 'date', required: true },
+    { name: 'ContractTerm', label: 'Contract Term (months)', type: 'number', required: true },
+  ],
+  Product2: [
+    { name: 'Name', label: 'Product Name', required: true },
+    { name: 'ProductCode', label: 'Product Code' },
+    { name: 'IsActive', label: 'Is Active', type: 'checkbox' },
+  ],
+  Order: [
+    { name: 'AccountId', label: 'Account ID', required: true },
+    { name: 'EffectiveDate', label: 'Order Date', type: 'date', required: true },
+    { name: 'Status', label: 'Status', type: 'select', options: ['Draft', 'Activated'] },
+  ],
+  Invoice__c: [
+    { name: 'Invoice_Number__c', label: 'Invoice Number', required: true },
+    { name: 'Total_Amount__c', label: 'Total Amount', type: 'number' },
+    { name: 'Status__c', label: 'Status', type: 'select', options: ['Draft', 'Sent', 'Paid', 'Overdue'] },
+  ],
+  Payment__c: [
+    { name: 'Amount__c', label: 'Amount', type: 'number', required: true },
+    { name: 'Payment_Date__c', label: 'Payment Date', type: 'date' },
+    { name: 'Payment_Method__c', label: 'Payment Method', type: 'select', options: ['Cash', 'Credit Card', 'Bank Transfer'] },
+  ],
+  Inventory__c: [
+    { name: 'Product__c', label: 'Product ID', required: true },
+    { name: 'Quantity_Available__c', label: 'Quantity Available', type: 'number' },
+    { name: 'Warehouse_Location__c', label: 'Warehouse Location' },
+  ],
+  Shipment__c: [
+    { name: 'Order__c', label: 'Order ID', required: true },
+    { name: 'Tracking_Number__c', label: 'Tracking Number' },
+    { name: 'Status__c', label: 'Status', type: 'select', options: ['Pending', 'In Transit', 'Delivered'] },
+  ],
+};
+
+
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -105,19 +213,67 @@ export default function App() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/${activeTab}`, {
-        method: 'POST',
+      const isUpdate = formData.Id ? true : false;
+      const method = isUpdate ? 'PATCH' : 'POST';
+      const url = isUpdate ? `${API}/${activeTab}/${formData.Id}` : `${API}/${activeTab}`;
+      
+      // Filter out read-only fields that Salesforce won't accept
+      const readOnlyFields = ['Id', 'CreatedDate', 'CreatedById', 'LastModifiedDate', 'LastModifiedById', 'SystemModstamp', 'IsDeleted'];
+      const cleanData = Object.keys(formData)
+        .filter(key => !readOnlyFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = formData[key];
+          return obj;
+        }, {});
+      
+      console.log('📤 Submitting data:', cleanData);
+      
+      const res = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(cleanData),
       });
       const data = await res.json();
       if (data.success) {
-        setToast({ message: `${activeTab} created successfully!`, type: 'success' });
+        setToast({ message: `${activeTab} ${isUpdate ? 'updated' : 'created'} successfully!`, type: 'success' });
         setFormData({});
         setShowForm(false);
         fetchRecords();
       } else {
-        setToast({ message: data.error || 'Failed to create record', type: 'error' });
+        setToast({ message: data.error || `Failed to ${isUpdate ? 'update' : 'create'} record`, type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: err.message || 'An error occurred', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (record) => {
+    setFormData(record);
+    setShowForm(true);
+    setDetailView(null); // Close detail view
+    setToast({ message: `Editing ${activeTab}`, type: 'success' });
+  };
+
+  const handleDelete = async (recordId, recordName) => {
+    if (!window.confirm(`Are you sure you want to delete this ${activeTab}?\n\n${recordName || recordId}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/${activeTab}/${recordId}`, {
+        method: 'DELETE',
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setToast({ message: `${activeTab} deleted successfully!`, type: 'success' });
+        fetchRecords();
+      } else {
+        setToast({ message: data.error || 'Failed to delete record', type: 'error' });
       }
     } catch (err) {
       setToast({ message: err.message || 'An error occurred', type: 'error' });
@@ -242,6 +398,8 @@ export default function App() {
               relatedRecords={relatedRecords}
               loadingRelated={loadingRelated}
               onNavigateToRelated={handleNavigateToRelated}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
             />
           ) : (
             <ObjectView
@@ -250,6 +408,8 @@ export default function App() {
               formData={formData}
               setFormData={setFormData}
               handleSubmit={handleSubmit}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
               loading={loading}
               fetchingRecords={fetchingRecords}
               showForm={showForm}
@@ -265,7 +425,7 @@ export default function App() {
 }
 
 // Detail View Component
-function DetailView({ objectName, record, onBack, relatedRecords, loadingRelated, onNavigateToRelated }) {
+function DetailView({ objectName, record, onBack, relatedRecords, loadingRelated, onNavigateToRelated, handleEdit, handleDelete }) {
   const fields = formConfigs[objectName] || [];
   const navItem = navItems.find(i => i.id === objectName);
   const Icon = navItem?.icon || Building2;
@@ -307,11 +467,11 @@ function DetailView({ objectName, record, onBack, relatedRecords, loadingRelated
         </div>
 
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(30, 41, 59, 0.5)', color: '#e2e8f0', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '999px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => handleEdit(record)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(30, 41, 59, 0.5)', color: '#e2e8f0', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '999px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
             <Edit size={18} />
             Edit
           </button>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '999px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => handleDelete(record.Id, recordName)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '999px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
             <Trash2 size={18} />
             Delete
           </button>
@@ -454,7 +614,7 @@ function LoginPage({ onLogin, setToast }) {
 
     setTimeout(() => {
       const user = {
-        name: 'Babatope Olajide',
+        name: 'Salesforceconnect',
         email: email,
         role: 'Administrator'
       };
@@ -475,7 +635,7 @@ function LoginPage({ onLogin, setToast }) {
             <span style={{ color: '#fff', fontWeight: 700, fontSize: '36px' }}>L</span>
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#fff', margin: '0 0 8px 0' }}>Welcome Back</h1>
-          <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>Sign in to LagosMart Retail CRM</p>
+          <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>Sign in to Zaylo</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -751,11 +911,10 @@ function Header({ sidebarOpen, setSidebarOpen, currentUser, onLogout }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px rgba(139, 92, 246, 0.3)' }}>
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: '18px' }}>L</span>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: '18px' }}>Z</span>
             </div>
             <div>
-              <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>LagosMart Retail</h1>
-              <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>Powered By MicroAgent CRM</p>
+              <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>Zaylo</h1>
             </div>
           </div>
         </div>
@@ -802,7 +961,7 @@ function Header({ sidebarOpen, setSidebarOpen, currentUser, onLogout }) {
 function Sidebar({ sidebarOpen, activeTab, setActiveTab }) {
   return (
     <aside style={{ position: 'fixed', left: 0, top: '80px', bottom: 0, width: sidebarOpen ? '256px' : '80px', backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(51, 65, 85, 0.5)', transition: 'width 0.3s', zIndex: 30, overflowY: 'auto' }}>
-      <nav style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <nav style={{ padding: '16px', paddingBottom: '80px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -819,6 +978,11 @@ function Sidebar({ sidebarOpen, activeTab, setActiveTab }) {
             Invoice__c: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             Shipment__c: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
             Inventory__c: 'linear-gradient(135deg, #eab308 0%, #f97316 100%)',
+            Payment__c: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            Quote: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            Asset: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+            Campaign: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
+            WorkOrder: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
           };
 
           return (
@@ -830,8 +994,8 @@ function Sidebar({ sidebarOpen, activeTab, setActiveTab }) {
         })}
       </nav>
       {sidebarOpen && (
-        <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}>
-          <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', border: 'none', borderRadius: '12px', cursor: 'pointer', background: 'transparent', color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>
+        <div style={{ position: 'fixed', bottom: '16px', left: '16px', width: '224px', backgroundColor: 'rgba(15, 23, 42, 0.95)', borderRadius: '12px', padding: '8px', zIndex: 31 }}>
+          <button onClick={() => alert('Settings feature coming soon!')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent', color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>
             <Settings size={20} />
             <span>Settings</span>
           </button>
@@ -964,7 +1128,7 @@ function DashboardView({ records, setShowImportModal, onNavigate }) {
 }
 
 // Object View Component with enhanced list view
-function ObjectView({ objectName, records, formData, setFormData, handleSubmit, loading, fetchingRecords, showForm, setShowForm, setShowImportModal, onViewDetail }) {
+function ObjectView({ objectName, records, formData, setFormData, handleSubmit, handleEdit, handleDelete, loading, fetchingRecords, showForm, setShowForm, setShowImportModal, onViewDetail }) {
   const fields = formConfigs[objectName] || [];
   const navItem = navItems.find(i => i.id === objectName);
   const Icon = navItem?.icon || Building2;
@@ -1090,8 +1254,10 @@ function ObjectView({ objectName, records, formData, setFormData, handleSubmit, 
         {showForm && (
           <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(20px)', border: '1px solid rgba(51, 65, 85, 0.5)', borderRadius: '16px', padding: '24px', position: 'sticky', top: '96px', height: 'fit-content', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>Create {objectName}</h2>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
+                {formData.Id ? `Edit ${objectName}` : `Create ${objectName}`}
+              </h2>
+              <button onClick={() => { setShowForm(false); setFormData({}); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}>
                 <X size={20} />
               </button>
             </div>
@@ -1107,7 +1273,11 @@ function ObjectView({ objectName, records, formData, setFormData, handleSubmit, 
               ))}
 
               <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 24px', background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}>
-                {loading ? <><Loader2 className="animate-pulse" size={20} /> Saving...</> : <><Check size={20} /> Save {objectName}</>}
+                {loading ? (
+                  <><Loader2 className="animate-pulse" size={20} /> Saving...</>
+                ) : (
+                  <><Check size={20} /> {formData.Id ? 'Update' : 'Save'} {objectName}</>
+                )}
               </button>
             </div>
           </div>
@@ -1154,10 +1324,10 @@ function ObjectView({ objectName, records, formData, setFormData, handleSubmit, 
                           <button onClick={() => onViewDetail(rec)} style={{ padding: '6px', backgroundColor: 'rgba(59, 130, 246, 0.1)', border: 'none', borderRadius: '6px', color: '#3b82f6', cursor: 'pointer' }}>
                             <Eye size={16} />
                           </button>
-                          <button style={{ padding: '6px', backgroundColor: 'rgba(139, 92, 246, 0.1)', border: 'none', borderRadius: '6px', color: '#8b5cf6', cursor: 'pointer' }}>
+                          <button onClick={() => handleEdit(rec)} style={{ padding: '6px', backgroundColor: 'rgba(139, 92, 246, 0.1)', border: 'none', borderRadius: '6px', color: '#8b5cf6', cursor: 'pointer' }}>
                             <Edit size={16} />
                           </button>
-                          <button style={{ padding: '6px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '6px', color: '#ef4444', cursor: 'pointer' }}>
+                          <button onClick={() => handleDelete(rec.Id, rec.Name || `${rec.FirstName || ''} ${rec.LastName || ''}`.trim() || rec.Subject)} style={{ padding: '6px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '6px', color: '#ef4444', cursor: 'pointer' }}>
                             <Trash2 size={16} />
                           </button>
                         </div>
