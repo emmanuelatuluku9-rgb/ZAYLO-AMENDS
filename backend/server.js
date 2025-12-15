@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increased limit for CSV data
 
 const conn = new jsforce.Connection({
   loginUrl: process.env.SF_INSTANCE_URL || 'https://login.salesforce.com'
@@ -25,7 +25,7 @@ async function connectToSalesforce() {
   }
 }
 
-// Field mappings for each object - CORRECTED for custom objects
+// Field mappings for each object
 const objectFields = {
   Account: 'Id, Name, Industry, Phone, Type, Website, BillingCity, BillingState, CreatedDate',
   Contact: 'Id, FirstName, LastName, Email, Phone, Title, Department, AccountId, CreatedDate',
@@ -40,12 +40,22 @@ const objectFields = {
   Order: 'Id, OrderNumber, Status, TotalAmount, EffectiveDate, AccountId, BillingCity, ShippingCity, CreatedDate',
   Quote: 'Id, Name, Status, GrandTotal, ExpirationDate, OpportunityId, AccountId, CreatedDate',
   
-  // Custom objects - with proper field API names
+  // Custom objects
   Invoice__c: 'Id, Name, Invoice_Number__c, Status__c, Total_Amount__c, Invoice_Date__c, Due_Date__c, Order__c, Account__c, CreatedDate',
   Payment__c: 'Id, Name, Amount__c, Payment_Date__c, Payment_Method__c, Status__c, Invoice__c, CreatedDate',
   Inventory__c: 'Id, Name, Product__c, Warehouse_Location__c, Quantity_Available__c, Unit_Cost__c, CreatedDate',
   Shipment__c: 'Id, Name, Order__c, Tracking_Number__c, Carrier__c, Status__c, Shipped_Date__c, CreatedDate'
 };
+
+// Read-only fields that should be filtered out
+const readOnlyFields = ['Id', 'CreatedDate', 'CreatedById', 'LastModifiedDate', 'LastModifiedById', 'SystemModstamp', 'IsDeleted'];
+
+// Helper function to clean data
+function cleanRecordData(data) {
+  const cleaned = { ...data };
+  readOnlyFields.forEach(field => delete cleaned[field]);
+  return cleaned;
+}
 
 // ⚠️ IMPORTANT: Health endpoint MUST come BEFORE generic :object routes!
 app.get('/api/health', (req, res) => {
@@ -54,6 +64,71 @@ app.get('/api/health', (req, res) => {
     connected: !!conn.accessToken,
     timestamp: new Date().toISOString()
   });
+});
+
+// CSV BULK IMPORT ENDPOINT - NEW!
+app.post('/api/:object/import', async (req, res) => {
+  try {
+    const { object } = req.params;
+    const { records } = req.body;
+    
+    console.log(`📥 Bulk importing ${records.length} ${object} records...`);
+    
+    if (!records || !Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No records provided for import' 
+      });
+    }
+    
+    // Clean all records (remove read-only fields)
+    const cleanedRecords = records.map(record => cleanRecordData(record));
+    
+    console.log(`🧹 Cleaned ${cleanedRecords.length} records for import`);
+    
+    // Salesforce bulk create (handles up to 200 records per batch automatically)
+    const results = await conn.sobject(object).create(cleanedRecords);
+    
+    // Process results
+    const successes = [];
+    const errors = [];
+    
+    results.forEach((result, index) => {
+      if (result.success) {
+        successes.push({
+          index,
+          id: result.id,
+          record: records[index]
+        });
+      } else {
+        errors.push({
+          index,
+          record: records[index],
+          errors: result.errors
+        });
+      }
+    });
+    
+    console.log(`✅ Import complete: ${successes.length} success, ${errors.length} errors`);
+    
+    res.json({
+      success: true,
+      totalRecords: records.length,
+      successCount: successes.length,
+      errorCount: errors.length,
+      successes: successes.slice(0, 10), // Return first 10 for preview
+      errors: errors.slice(0, 10), // Return first 10 errors
+      message: `Successfully imported ${successes.length} of ${records.length} records`
+    });
+    
+  } catch (err) {
+    console.error(`❌ Bulk import error for ${req.params.object}:`, err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message,
+      details: 'Failed to import records. Please check your data format and try again.'
+    });
+  }
 });
 
 // Create record
@@ -119,11 +194,7 @@ app.patch('/api/:object/:id', async (req, res) => {
     const { object, id } = req.params;
     console.log(`Updating ${object} ${id}:`, req.body);
     
-    // Remove all read-only fields from update payload
-    const readOnlyFields = ['Id', 'CreatedDate', 'CreatedById', 'LastModifiedDate', 'LastModifiedById', 'SystemModstamp', 'IsDeleted'];
-    const updateData = { ...req.body };
-    readOnlyFields.forEach(field => delete updateData[field]);
-    
+    const updateData = cleanRecordData(req.body);
     console.log(`Cleaned data for update:`, updateData);
     
     const result = await conn.sobject(object).update({
@@ -168,5 +239,6 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`📥 CSV Import: POST /api/:object/import`);
   await connectToSalesforce();
 });
