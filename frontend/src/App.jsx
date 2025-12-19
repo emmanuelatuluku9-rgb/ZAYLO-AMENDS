@@ -175,58 +175,71 @@ const formConfigs = {
     { name: "Industry", label: "Industry" },
   ],
 
-  Case: [
-    { name: "Reason", label: "Case Reason", type: "select", options: ["None", "User didn't attend training", "Complex functionality", "Existing problem", "Instructions not clear", "New problem"] },
+  CaseSC__c: [
+    { name: "Name", label: "Cases", required: true },
+    { name: "Escalation_Reason__c", label: "Escalation Reason", type: "select", options: ["None", "Installation issue, Complex functionality", "Existing problems", "Instructions not clear", "Performance", "Others", ] },
     {
-     // name: "	Status",
+      name: "Status__c",
       label: "Status",
       type: "select",
-      options: ["None", "New", "Working", "Escalated", "Closed-basic", "Reopened", "Reply received", "Pending customer reply", "On Hold", "Resolved"],
+      options: ["None", "New", "Working", "Escalated", "Closed", "Reopened", "Reply received", "Pending customer reply", "On Hold", "Resolved"],
     },
     {
-      name: "Priority",
+      name: "Priority__c",
       label: "Priority",
       type: "select",
       options: ["Low", "Medium", "High"],
     },
-    {
-      name: "Type",
-      label: "Type",
-      type: "select",
-      options: ["Question", "Problem", "Feature Request", "Contact", "Support", "Grader"],
-    },
-    {
-      name: "Origin",
+    
+     {
+      name: "Origin__c",
       label: "Origin",
       type: "select",
       options: ["Phone", "Email", "Web", "Chat"],
     },
-    { name: "AccountId", label: "Account ID" },
-    { name: "ContactId", label: "Contact ID" },
+    { name: "AccountId__c", label: "Account ID" },
+    { name: "ContactId__c", label: "Contact ID" },
+        ,
     {
-      name: "AI_Chatbot__c",
-      label: "AI chatbot",
-    },
-    {
-      name: "AI_Response__c",
-      label: "AI response",
-    },
-    {
-      name: "CaseNumber",
+      name: "Case_Number__c",
       label: "Case Number",
     },
-    {
-      name: "MilestoneStatus",
-      label: "milestone status",
+    {name: "	Resolution_Summary_c__c",
+      label: "Resolution Summary",
+   
     },
     {
-      name: "Time_Spent__c",
-      label: "Time spent",
+      name: "CreatedDate__c",
+      label: "Created Date", type: "datetime"
     },
     {
-      name: "Chatbot_Response__c",
-      label: "Chatbot Response",
+      name: "SLA_Breached__c",
+      label: "SLA Breached",
       type: "checkbox"
+    },
+     {
+      name: "Risk_Flag__c",
+      label: "Risk Flag",
+      type: "checkbox"
+    },
+    {
+      name: "Subject__c",
+      label: "Subject",
+    },
+    {
+      name: "ClosedDate__c",
+      label: "Closed Date", type: "datetime",
+    },
+
+    {
+      name: "Customer_Impact__c",
+      label: "Customer Impact",
+      type: "select",
+      options: ["Critical", "Major", "Minor", "Cosmetic", "Others", ],
+    },
+      {name: "Description__c",
+      label: "Description",
+   
     },
   ],
 
