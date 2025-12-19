@@ -72,7 +72,7 @@ const navItems = [
   { id: "Contact", icon: Users, label: "Contacts" },
   { id: "Lead", icon: Target, label: "Leads" },
   { id: "Task", icon: ClipboardList, label: "Tasks" },
-  { id: "Case", icon: FileText, label: "Cases" },
+  { id: "CaseSC__c", icon: FileText, label: "Cases" },
   { id: "Opportunity", icon: DollarSign, label: "Opportunities" },
   { id: "Contract", icon: FileText, label: "Contracts" },
  // { id: "Product2", icon: Package, label: "Products" },
@@ -177,7 +177,7 @@ const formConfigs = {
 
   CaseSC__c: [
     { name: "Name", label: "Cases", required: true },
-    { name: "Escalation_Reason__c", label: "Escalation Reason", type: "select", options: ["None", "Installation issue, Complex functionality", "Existing problems", "Instructions not clear", "Performance", "Others", ] },
+    { name: "Escalation_Reason__c", label: "Escalation Reason", type: "select", options: ["None", "Installation issue", "Complex functionality", "Existing problems", "Instructions not clear", "Performance", "Others"] },
     {
       name: "Status__c",
       label: "Status",
@@ -204,13 +204,23 @@ const formConfigs = {
       name: "Case_Number__c",
       label: "Case Number",
     },
-    {name: "	Resolution_Summary_c__c",
+    {name: "Resolution_Summary__c",
       label: "Resolution Summary",
    
     },
     {
       name: "CreatedDate__c",
-      label: "Created Date", type: "datetime"
+      label: "Created Date", 
+      type: "date",
+      typeAttributes: {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    }
     },
     {
       name: "SLA_Breached__c",
@@ -228,7 +238,17 @@ const formConfigs = {
     },
     {
       name: "ClosedDate__c",
-      label: "Closed Date", type: "datetime",
+      label: "Closed Date", 
+      type: "date",
+      typeAttributes: {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    }
     },
 
     {

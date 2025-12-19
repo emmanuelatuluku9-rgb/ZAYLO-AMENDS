@@ -32,7 +32,7 @@ const objectFields = {
   Contact:
     "Id, FirstName, LastName, Email, Phone, Title, Department, AccountId, CreatedDate",
   Lead: "Id, FirstName, LastName, Company, Email, Phone, Status, Industry, CreatedDate",
-  CaseSC__c: "AccountId__c, Case_Number__c, Name, ClosedDate__c, ContactId__c, CreatedDate__c, Customer_Impact__c, Description__c, Escalation_Reason__c, Origin__c, Priority__c, Resolution_Summary_c__c, Risk_Flag__c, SLA_Breached__c, Status__c, Subject__c",
+  CaseSC__c: "AccountId__c, Case_Number__c, Name, ClosedDate__c, ContactId__c, CreatedDate__c, Customer_Impact__c, Description__c, Escalation_Reason__c, Origin__c, Priority__c, 	Resolution_Summary__c, Risk_Flag__c, SLA_Breached__c, Status__c, Subject__c",
   Opportunity:
     "Id, Name, StageName, Amount, CloseDate, Probability, Type, AccountId, CreatedDate",
   Contract: "Id, AccountId, Status, StartDate, ContractTerm, CreatedDate",
