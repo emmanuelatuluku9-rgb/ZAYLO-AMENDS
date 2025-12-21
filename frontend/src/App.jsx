@@ -61,6 +61,7 @@ import {
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 
+
 // ============================================
 // NAVIGATION - ALL OBJECTS INCLUDING CUSTOM
 // ============================================
@@ -384,11 +385,11 @@ const formConfigs = {
       required: true,
     },
     {
-      name: "Payment_Reference__c",
-      label: "Payment Reference",
+      name: "Amount__c",
+      label: "Amount",
+      type: "Currency",
       required: true,
     },
-    { name: "Amount__c", label: "Amount", type: "number", required: true },
     {
       name: "Payment_Date__c",
       label: "Payment Date",

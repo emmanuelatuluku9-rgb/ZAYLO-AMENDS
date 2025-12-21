@@ -48,10 +48,10 @@ const objectFields = {
     "Id, Name, Status, GrandTotal, ExpirationDate, OpportunityId, AccountId, CreatedDate",
 
   // Custom objects
-   //Invoice__c:
-    //"Id, Name, Invoice_Number__c, Status__c, Total_Amount__c, Invoice_Date__c, Due_Date__c, Order__c, Account__c, CreatedDate",
-  Payment__c:
-    "Id, Name, Amount__c, Payment_Date__c, Payment_Method__c, Status__c, Invoice__c, CreatedDate",
+   //InvoiceSC__c:
+    //"Id, Name, Invoice_Number__c, Status__c, Total_Amount__c, Invoice_Date__c, Due_Date__c, OrderSC__c, AccountSC__c, CreatedDate",
+  PaymentSC__c:
+    "Id, Name, Account__c, Amount__c, InvoiceSC__c, Method__c, OrderSC__c, Payment_Method__c, Payment_Date__c, Payment_Reference__c, Status__c",
   Inventory__c:
     "Id, Name, Product__c, Warehouse_Location__c, Quantity_Available__c, Unit_Cost__c, CreatedDate",
   ShipmentSC__c:
@@ -64,8 +64,8 @@ const objectFields = {
     "Id,	Account__c, Name, Invoice_Number__c, Amount__c, Paid_Amount__c, Due_Date__c, OrderSC__c, Status__c, CreatedDate",
   CRM_DealSC__c:
     "Id, Name, Amount__c, Close_Date__c, Source_System__c, Stage__c, Account__c, CreatedDate",
-  PaymentSC__c:
-    "Id, Name, Payment_Reference__c, Amount__c, Payment_Date__c, Payment_Method__c, Status__c, CreatedDate",
+  //PaymentSC__c:
+    //"Id, Name, Payment_Reference__c, Amount__c, Payment_Date__c, Payment_Method__c, Status__c, CreatedDate",
   OrderSC__c:
     "Id, Order_Number__c, Account__c, Contact__c, Product_Name__c, Quantity__c, CreatedDate",
 };
